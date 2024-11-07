@@ -1,0 +1,24 @@
+# Python virtual environment
+Include/
+Lib/
+Scripts/
+pyvenv.cfg
+share/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter
+.ipynb_checkpoints/
+etc/
+
+# VS Code
+.vscode/
+
+# Data files (jeśli są zbyt duże)
+data/openfoodfacts.csv
+
+# Environment
+.env
