@@ -2,13 +2,14 @@ from typing import List, Dict, Optional
 from functools import lru_cache
 import pandas as pd
 from models.domain.off_product import OpenFoodFactsProduct
-from services.recommendation.recommendation_strategy import RecommendationStrategy
+from app.services.recommendation.strategy import RecommendationStrategy
 from logging import getLogger
-import re
+import app.services.recommendation.factors.recommendation_factor as FactorStatus
 from services.recommendation.factors.categories.categories_comparator import CategoriesComparator
 from services.recommendation.evaluator.off_evaluator import OpenFoodFactsProductEvaluator
 from services.text_processing.sentence_transformer_comparator import SentenceTransformerComparator
 from services.recommendation.factors.nutritional_rating_systems.nutriscore import NutriscoreEvaluator
+from heapq import nlargest, nsmallest, heappush
 
 logger = getLogger(__name__)
 
@@ -79,45 +80,45 @@ class RecommendationEngine:
     def __exclude_redundant_products(self, df: pd.DataFrame, product_categories) -> pd.DataFrame:
         return (df
                     .pipe(self.__filter_categories, product_categories)
-                    .pipe(self.__exclude_factors))
-    
+                    .pipe(self.__avoid_factors))
+
 
     def __get_n_best_recommendations(self, from_df: pd.DataFrame, product: OpenFoodFactsProduct, n: int = 1) -> List[str]:
         try:
-            evaluation_dict = self.__evaluate_all(from_df)
+            evaluation_heap = self.__evaluate_all(from_df)
             
-            
-            evaluation_df = pd.DataFrame.from_dict(evaluation_dict, orient='index', columns=['score'])
-            evaluation_df.index.name = 'code'
-            
-            
-            ascending = not self.recommendation_strategy.nutritional_rating_system.maximize_score
-            sorted_df = evaluation_df.sort_values('score', ascending=ascending)
-            
-            
-            return sorted_df.head(n).index.tolist()
+            if self.recommendation_strategy.nutritional_rating_system.maximize_score:
+                best_n = [(score * -1, code) for score, code in nlargest(n, evaluation_heap)]
+            else:
+                best_n = nsmallest(n, evaluation_heap)
+                
+            return [code for _, code in best_n]
             
         except Exception as e:
             logger.error(f"Error getting recommendations: {str(e)}")
             return []
     
+    def compare_ratings(self, product1: OpenFoodFactsProduct, product2: OpenFoodFactsProduct) -> float:
+        return self.recommendation_strategy.nutritional_rating_system.compare_ratings(product1, product2)
+        
 
     def __evaluate(self, product: OpenFoodFactsProduct) -> float:
         return self.evaluator.evaluate(product, self.recommendation_strategy)
 
-    def __evaluate_all(self, df: pd.DataFrame) -> Dict[str, float]:
-        evaluation = {}
+    def __evaluate_all(self, df: pd.DataFrame) -> List[tuple[float, str]]:
+        evaluation = []
+        sign = -1 if self.recommendation_strategy.nutritional_rating_system.maximize_score else 1
+        
         for _, row in df.iterrows():
             try:
                 product = OpenFoodFactsProduct(row['code'], row)
-                evaluation[row['code']] = self.__evaluate(product)
+                score = self.__evaluate(product)
+                heappush(evaluation, (sign * score, row['code']))
             except Exception as e:
                 logger.warning(f"Failed to evaluate product {row['code']}: {str(e)}")
                 continue
         return evaluation
     
-    def __exclude_incomplete_products(self, df: pd.DataFrame) -> pd.DataFrame:
-        pass
 
     @lru_cache(maxsize=1000)
     def __compare_categories(self, product_categories, target_categories):
@@ -130,14 +131,10 @@ class RecommendationEngine:
         return df[df['similarity'] >= self.categories_similarity_threshold].reset_index(drop=True)
         
 
-    def __exclude_factors(self, df: pd.DataFrame) -> pd.DataFrame:
+    def __avoid_factors(self, df: pd.DataFrame) -> pd.DataFrame:
         for factor in self.recommendation_strategy.recommendation_factors:
-            if factor.avoid:
-                patterns = [rf'\b{re.escape(content)}\b' for content in factor.content]
-                mask = ~df[factor.name].str.contains('|'.join(patterns), 
-                                                case=False, 
-                                                na=False,
-                                                regex=True)
-                df = df[mask]
+            if factor.status == FactorStatus.AVOID:
+                mask = ~df.apply(lambda x: factor.exists(x), axis=1)
+                df = df[mask].reset_index(drop=True)
         return df
         

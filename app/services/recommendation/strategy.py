@@ -1,4 +1,4 @@
-from services.recommendation.factors.recommendation_factor import RecommendationFactor
+from services.recommendation.factors.recommendation_factor import RecommendationFactor, FactorStatus
 from dataclasses import dataclass
 from typing import List
 from services.recommendation.factors.nutritional_rating_systems.nutriscore import Nutriscore
@@ -20,21 +20,24 @@ class RecommendationStrategy:
     def create_default(cls) -> "RecommendationStrategy":
         default_factors = [
             RecommendationFactor(
-                name="labels_en",
-                weight=1,
-                content=["No alcohol", "No colorings"]
+                name="organic",
+                findable_in = ["labels_tags"]
             ),
             RecommendationFactor(
-                name="traces_tags",
-                weight=1,
-                content=["nuts"],
-                avoid=True
+                name="vegetarian",
+                findable_in = ["labels_tags"]
             ),
             RecommendationFactor(
-                name="allergens",
-                weight=1,
-                content=["gluten"],
-                avoid=True
+                name="eggs",
+                findable_in = ["allergens", "traces_tags"],
+            ),
+            RecommendationFactor(
+                name="milk",
+                findable_in = ["allergens", "traces_tags"]
+            ),
+            RecommendationFactor(
+                name="nuts",
+                findable_in = ["allergens", "traces_tags"]
             )
         ]
         return cls(

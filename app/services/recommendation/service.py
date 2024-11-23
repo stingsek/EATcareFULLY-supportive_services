@@ -1,13 +1,14 @@
 from typing import List
 import pandas as pd
 from models.domain.off_product import OpenFoodFactsProduct
-
+from app.models.schemas.product import ProductRecommendation
 
 class RecommendationSystem:
     """
     High-level interface for product recommendations.
     
     Usage example:
+    ```
         system = RecommendationSystem(
             recommendation_engine=RecommendationEngine(DefaultRecommendationStrategy)
         )
@@ -17,7 +18,7 @@ class RecommendationSystem:
             for_product=target_product,
             n=5
         )
-
+    ```
     Args:
         recommendation_engine (RecommendationEngine): The recommendation engine instance that will handle
             the recommendation logic.
@@ -45,4 +46,7 @@ class RecommendationSystem:
             )
         """
         return self.recommendation_engine.find_recommendations(from_df, for_product, n)
-            
+    
+    async def generate_recommendations(product_id: str) -> List[ProductRecommendation]:
+            pass
+

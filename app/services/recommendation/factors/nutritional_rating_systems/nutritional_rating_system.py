@@ -29,3 +29,8 @@ def calculate_score(self, product: OpenFoodFactsProduct) -> NutritionalScore:
 def rate(self, product: OpenFoodFactsProduct) -> Any:
     """Convert numerical score to specific grade."""
     pass
+
+@abstractmethod
+def has_better_rating(self, target_product: OpenFoodFactsProduct, other_product: OpenFoodFactsProduct) -> bool:
+    """Compare two ratings from NutritionalRatingSystem."""
+    pass

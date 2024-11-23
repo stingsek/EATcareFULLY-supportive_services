@@ -1,7 +1,31 @@
 from services.recommendation.factors.nutritional_rating_systems.nutritional_rating_system import NutritionalScore, NutritionalRatingSystem
 from models.domain.off_product import OpenFoodFactsProduct
 from services.recommendation.evaluator.off_evaluator import OpenFoodFactsProductEvaluator
-from services.recommendation.recommendation_strategy import RecommendationStrategy
+from app.services.recommendation.strategy import RecommendationStrategy
+from enum import Enum
+from recommendation_factor import FactorStatus
+
+class NutriscoreGrade(Enum):
+    A = "A"
+    B = "B"
+    C = "C"
+    D = "D"
+    E = "E"
+    
+    def __lt__(self, other):
+        grades_order = {"A": 1, "B": 2, "C": 3, "D": 4, "E": 5}
+        return grades_order[self.value] < grades_order[other.value]
+        
+    def __gt__(self, other):
+        grades_order = {"A": 1, "B": 2, "C": 3, "D": 4, "E": 5}
+        return grades_order[self.value] > grades_order[other.value]
+        
+    def __le__(self, other):
+        return self < other or self == other
+        
+    def __ge__(self, other):
+        return self > other or self == other
+
 
 class Nutriscore(NutritionalRatingSystem):
     """Implementation of the Nutri-Score rating system."""
@@ -49,7 +73,7 @@ class Nutriscore(NutritionalRatingSystem):
             product: OpenFoodFactsProduct instance
             
         Returns:
-            float: Calculated Nutri-Score
+            NutritionalScore: Calculated Nutri-Score
         
         Raises:
             ValueError: If required nutritional data is missing
@@ -99,7 +123,7 @@ class Nutriscore(NutritionalRatingSystem):
         
         return NutritionalScore(negative_points - positive_points)
 
-    def rate(self, product: OpenFoodFactsProduct) -> str:
+    def rate(self, product: OpenFoodFactsProduct) -> NutriscoreGrade:
         """
         Convert numerical score to Nutri-Score grade (A-E).
         
@@ -107,35 +131,59 @@ class Nutriscore(NutritionalRatingSystem):
             product: OpenFoodFactsProduct instance
             
         Returns:
-            str: Nutri-Score grade (A-E)
+            NutriscoreGrade: Nutri-Score grade (A-E)
         """
         score = self.calculate_score(product)
         category = product.category.value
         
         ranges = {
             "solid": {
-                (-float('inf'), -1): "A",
-                (-1, 2): "B",
-                (2, 10): "C",
-                (10, 18): "D",
-                (18, float('inf')): "E"
+                (-float('inf'), -1): NutriscoreGrade.A,
+                (-1, 2): NutriscoreGrade.B,
+                (2, 10): NutriscoreGrade.C,
+                (10, 18): NutriscoreGrade.D,
+                (18, float('inf')): NutriscoreGrade.E
             },
             "beverage": {
-                (-float('inf'), 0): "A",
-                (0, 1): "B",
-                (1, 5): "C",
-                (5, 9): "D",
-                (9, float('inf')): "E"
+                (-float('inf'), 0): NutriscoreGrade.A,
+                (0, 1): NutriscoreGrade.B,
+                (1, 5): NutriscoreGrade.C,
+                (5, 9): NutriscoreGrade.D,
+                (9, float('inf')): NutriscoreGrade.E
             }
         }
         
         for (min_score, max_score), grade in ranges[category].items():
             if min_score < score <= max_score:
                 return grade
-                
-        return "E"  # Default grade if no range matches
+            
+        return NutriscoreGrade.E  # Default grade if no range matches
+    
+    def __has_nutriscore(self, product: OpenFoodFactsProduct) -> bool:
+        return product.details["nutriscore_grade"].notna() or product.details["nutriscore_grade"] != ""
+    
+    def has_better_rating(self, target_product: OpenFoodFactsProduct, other_product: OpenFoodFactsProduct) -> bool:
+        """
+        Compare two Nutri-Score ratings.
+        
+        Args:
+            product1: OpenFoodFactsProduct instance
+            product2: OpenFoodFactsProduct instance
+            
+        Returns:
+            float: Difference between two Nutri-Score ratings
+        """
+        if target_product.details.empty or other_product.details.empty:
+            raise ValueError("Cannot compare empty products")
+        
+        target_product_grade = self.rate(target_product) if not self.__has_nutriscore(target_product) else target_product.details["nutriscore_grade"].iloc[0].upper()
+        other_product_grade = self.rate(other_product) if not self.__has_nutriscore(other_product) else other_product.details["nutriscore_grade"].iloc[0].upper()
+        
+        return target_product_grade < other_product_grade
     
 class NutriscoreEvaluator(OpenFoodFactsProductEvaluator):
+    def __init__(self, booster: int | None = 5) -> None:
+        super().__init__(booster)
     
     def evaluate(self, product: OpenFoodFactsProduct, recommendation_strategy: RecommendationStrategy) -> float:
         if product.details.empty:
@@ -147,21 +195,9 @@ class NutriscoreEvaluator(OpenFoodFactsProductEvaluator):
         score = float(product.details["nutriscore_score"].iloc[0])
 
         for factor in recommendation_strategy.recommendation_factors:
-            if factor.name in product.details.columns:
-                product_value = product.details[factor.name].iloc[0]
-                if isinstance(product_value, str):
-                    
-                    if any(content in product_value for content in factor.content):
-                        score = self._adjust_score(score, factor.weight, 
-                                                recommendation_strategy.nutritional_rating_system.maximize_score)
-                elif isinstance(factor.content, (int, float)) and factor.threshold:
-                    if product_value >= factor.threshold:
-                        score = self._adjust_score(score, factor.weight, 
-                                                recommendation_strategy.nutritional_rating_system.maximize_score)
-
+            if factor.exists(product.details):
+                    if factor.status == FactorStatus.RECOMMEND:
+                        score -= self.booster
         return score
     
-    def _adjust_score(self, current_score: float, weight: float, maximize: bool) -> float:
-        return current_score + weight if maximize else current_score - weight
-        
     

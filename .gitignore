@@ -19,6 +19,7 @@ etc/
 
 # Data files (jeśli są zbyt duże)
 data/openfoodfacts.csv
+data.processed/
 
 # Environment
 .env
