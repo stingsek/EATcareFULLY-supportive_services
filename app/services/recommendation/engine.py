@@ -98,8 +98,8 @@ class RecommendationEngine:
             logger.error(f"Error getting recommendations: {str(e)}")
             return []
     
-    def compare_ratings(self, product1: OpenFoodFactsProduct, product2: OpenFoodFactsProduct) -> float:
-        return self.recommendation_strategy.nutritional_rating_system.compare_ratings(product1, product2)
+    def compare_ratings(self, product1: OpenFoodFactsProduct, product2: OpenFoodFactsProduct) -> bool:
+        return self.recommendation_strategy.nutritional_rating_system.has_better_rating(product1, product2)
         
 
     def __evaluate(self, product: OpenFoodFactsProduct) -> float:
