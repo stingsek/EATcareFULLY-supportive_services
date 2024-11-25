@@ -162,24 +162,29 @@ class Nutriscore(NutritionalRatingSystem):
     def __has_nutriscore(self, product: OpenFoodFactsProduct) -> bool:
         return product.details["nutriscore_grade"].notna() or product.details["nutriscore_grade"] != ""
     
-    def has_better_rating(self, target_product: OpenFoodFactsProduct, other_product: OpenFoodFactsProduct) -> bool:
+    def has_better_rating(self, product: OpenFoodFactsProduct, other: OpenFoodFactsProduct) -> bool:
         """
-        Compare two Nutri-Score ratings.
+        Compare two products' Nutri-Score ratings.
         
         Args:
-            product1: OpenFoodFactsProduct instance
-            product2: OpenFoodFactsProduct instance
-            
+            product: First OpenFoodFactsProduct to compare
+            other: Second OpenFoodFactsProduct to compare
+                
         Returns:
-            float: Difference between two Nutri-Score ratings
+            bool: True if first product has better (lower) Nutri-Score rating than the second one
+            
+        Raises:
+            ValueError: If any of the products has empty details
         """
-        if target_product.details.empty or other_product.details.empty:
+        if product.details.empty or other.details.empty:
             raise ValueError("Cannot compare empty products")
         
-        target_product_grade = self.rate(target_product) if not self.__has_nutriscore(target_product) else target_product.details["nutriscore_grade"].iloc[0].upper()
-        other_product_grade = self.rate(other_product) if not self.__has_nutriscore(other_product) else other_product.details["nutriscore_grade"].iloc[0].upper()
+        def get_grade(prod: OpenFoodFactsProduct) -> str:
+            if self.__has_nutriscore(prod):
+                return prod.details["nutriscore_grade"].iloc[0].upper()
+            return self.rate(prod)
         
-        return target_product_grade < other_product_grade
+        return get_grade(product) < get_grade(other)
     
 class NutriscoreEvaluator(OpenFoodFactsProductEvaluator):
     def __init__(self, booster: int | None = 5) -> None:

@@ -1,4 +1,4 @@
-from typing import List, Dict, Optional
+from typing import List, Optional
 from functools import lru_cache
 import pandas as pd
 from models.domain.off_product import OpenFoodFactsProduct
@@ -34,9 +34,8 @@ class RecommendationEngine:
         categories_comparator: Handles comparison of product categories
         evaluator: Implements the product scoring logic
         categories_similarity_threshold: Minimum similarity score (0-1) for category matching
-        product_completness_threshold: Minimum required product data completeness (0-1)
     """
-    def __init__(self, recommendation_strategy: Optional[RecommendationStrategy] = None, categories_comparator: CategoriesComparator = SentenceTransformerComparator(), evaluator: OpenFoodFactsProductEvaluator = NutriscoreEvaluator(), categories_similarity_threshold: float = 0.9, product_completness_threshold: float = 0.5) -> None:
+    def __init__(self, recommendation_strategy: Optional[RecommendationStrategy] = None, categories_comparator: CategoriesComparator = SentenceTransformerComparator(), evaluator: OpenFoodFactsProductEvaluator = NutriscoreEvaluator(), categories_similarity_threshold: float = 0.9) -> None:
         """
         Initializes the RecommendationEngine with the specified strategy, comparator, evaluator,
         and category similarity threshold.
@@ -51,7 +50,6 @@ class RecommendationEngine:
         self.categories_comparator = categories_comparator
         self.evaluator = evaluator
         self.categories_similarity_threshold = categories_similarity_threshold
-        self.product_completness_threshold = product_completness_threshold
         
 
     def find_recommendations(self, from_df: pd.DataFrame, product: OpenFoodFactsProduct, n=1) -> List[int]:
@@ -77,13 +75,7 @@ class RecommendationEngine:
         return recommendations
 
 
-    def __exclude_redundant_products(self, df: pd.DataFrame, product_categories) -> pd.DataFrame:
-        return (df
-                    .pipe(self.__filter_categories, product_categories)
-                    .pipe(self.__avoid_factors))
-
-
-    def __get_n_best_recommendations(self, from_df: pd.DataFrame, product: OpenFoodFactsProduct, n: int = 1) -> List[str]:
+    def __get_n_best_recommendations(self, from_df: pd.DataFrame, product: OpenFoodFactsProduct, n: int = 1, have_better_rating: bool = True) -> List[str]:
         try:
             evaluation_heap = self.__evaluate_all(from_df)
             
@@ -91,17 +83,23 @@ class RecommendationEngine:
                 best_n = [(score * -1, code) for score, code in nlargest(n, evaluation_heap)]
             else:
                 best_n = nsmallest(n, evaluation_heap)
-                
+            
+            if have_better_rating:
+                best_n = [(score, code) for score, code in best_n if self.__compare_ratings(product, OpenFoodFactsProduct(code, from_df[from_df['code'] == code]))]
+            
+            if len(best_n) < n:
+                logger.warning(f"Could not find enough products to recommend. Found {len(best_n)} products.")
+
+            for score, code in best_n:
+                logger.info(f"Product {code} has a score of {score}") 
+            
             return [code for _, code in best_n]
             
         except Exception as e:
             logger.error(f"Error getting recommendations: {str(e)}")
             return []
     
-    def compare_ratings(self, product1: OpenFoodFactsProduct, product2: OpenFoodFactsProduct) -> bool:
-        return self.recommendation_strategy.nutritional_rating_system.has_better_rating(product1, product2)
-        
-
+    
     def __evaluate(self, product: OpenFoodFactsProduct) -> float:
         return self.evaluator.evaluate(product, self.recommendation_strategy)
 
@@ -119,6 +117,9 @@ class RecommendationEngine:
                 continue
         return evaluation
     
+    
+    def __compare_ratings(self, product1: OpenFoodFactsProduct, product2: OpenFoodFactsProduct) -> bool:
+        return self.recommendation_strategy.nutritional_rating_system.has_better_rating(product1, product2)
 
     @lru_cache(maxsize=1000)
     def __compare_categories(self, product_categories, target_categories):
@@ -137,4 +138,9 @@ class RecommendationEngine:
                 mask = ~df.apply(lambda x: factor.exists(x), axis=1)
                 df = df[mask].reset_index(drop=True)
         return df
+    
+    def __exclude_redundant_products(self, df: pd.DataFrame, product_categories) -> pd.DataFrame:
+        return (df
+                    .pipe(self.__filter_categories, product_categories)
+                    .pipe(self.__avoid_factors))
         
