@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - dataset_volume:/app/data/processed
+    environment:
+      - DATASET_PATH=/app/data/processed/openfoodfacts.pkl
+      - MODEL_CACHE_SIZE=75
+      - MEMORY_LIMIT=4g
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+
+volumes:
+  dataset_volume:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PWD}/data
+      o: bind
