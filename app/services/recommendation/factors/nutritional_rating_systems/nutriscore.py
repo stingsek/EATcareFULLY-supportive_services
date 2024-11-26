@@ -187,8 +187,8 @@ class Nutriscore(NutritionalRatingSystem):
         return get_grade(product) < get_grade(other)
     
 class NutriscoreEvaluator(OpenFoodFactsProductEvaluator):
-    def __init__(self, booster: int | None = 5) -> None:
-        super().__init__(booster)
+    def __init__(self, bonus: int | None = 5) -> None:
+        super().__init__(bonus)
     
     def evaluate(self, product: OpenFoodFactsProduct, recommendation_strategy: RecommendationStrategy) -> float:
         if product.details.empty:
@@ -202,7 +202,7 @@ class NutriscoreEvaluator(OpenFoodFactsProductEvaluator):
         for factor in recommendation_strategy.recommendation_factors:
             if factor.exists(product.details):
                     if factor.status == FactorStatus.RECOMMEND:
-                        score -= self.booster
+                        score -= self.bonus
         return score
     
     

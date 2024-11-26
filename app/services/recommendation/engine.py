@@ -143,4 +143,3 @@ class RecommendationEngine:
         return (df
                     .pipe(self.__filter_categories, product_categories)
                     .pipe(self.__avoid_factors))
-        
