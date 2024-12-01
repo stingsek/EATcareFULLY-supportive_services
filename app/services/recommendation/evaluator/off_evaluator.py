@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from models.domain.off_product import OpenFoodFactsProduct
-from app.services.recommendation.strategy import RecommendationStrategy
-from typing import Optional
+from app.services.recommendation.factors.recommendation_factor import RecommendationFactor
+from typing import Optional, List
 
 class OpenFoodFactsProductEvaluator(ABC):
     def __init__(self, bonus: Optional[int] = 5) -> None:
@@ -9,5 +9,5 @@ class OpenFoodFactsProductEvaluator(ABC):
         self.bonus = bonus
         
     @abstractmethod
-    def evaluate(self, product: OpenFoodFactsProduct, recommendation_strategy: RecommendationStrategy) -> float:
+    def evaluate(self, product: OpenFoodFactsProduct, recommendation_factors: List[RecommendationFactor]) -> float:
         pass

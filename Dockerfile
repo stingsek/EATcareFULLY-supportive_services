@@ -17,13 +17,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY ./app ./app
 
 # create data volume
-VOLUME ["/app/data/processed"]
+VOLUME ["/data/processed"]
 
 # copy dataset from previous stage
-COPY --from=dataset /data/processed/openfoodfacts.pkl /app/data/processed
+COPY --from=dataset /data/processed/openfoodfacts.pkl data/processed
 
 # environment variables
-ENV DATASET_PATH=/app/data/processed/openfoodfacts.pkl
+ENV DATASET_PATH=/data/processed/openfoodfacts.pkl
 ENV MODEL_CACHE_SIZE=75
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,33 +1,27 @@
 from typing import List, Optional, Dict
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
+from typing_extensions import Annotated
+from enum import IntEnum
+from typing import List, Optional, Dict
+from pydantic import BaseModel, Field, ConfigDict
+from app.services.recommendation.factors.recommendation_factor import FactorPreferenceStatus
 
-class PreferenceValue(int):
-    """Custom type for preference values to ensure they are only -1, 0, or 1"""
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, v):
-        if v not in [-1, 0, 1]:
-            raise ValueError('Preference value must be -1 (dislike), 0 (neutral), or 1 (like)')
-        return v
 
 class UserPreferences(BaseModel):
-    preferences: Dict[str, PreferenceValue] = Field(
+    details: Dict[str, FactorPreferenceStatus] = Field(
         default_factory=dict,
-        description="User preferences for recommendations (-1: dislike, 0: neutral, 1: like)",
+        description="User preferences (-1: dislike, 0: neutral, 1: like)",
         examples=[{"milk": -1, "nuts": 1, "chocolate": 0}]
     )
 
-    model_config = ConfigDict(
-        json_schema_extra={
+    model_config = {
+        "json_schema_extra": {
             "example": {
                 "preferences": {"milk": -1, "nuts": 1, "chocolate": 0}
             }
         }
-    )
+    }
 
 class ProductRecommendationRequest(BaseModel):
     product_code: str = Field(
@@ -35,22 +29,25 @@ class ProductRecommendationRequest(BaseModel):
         min_length=8,
         max_length=48,
         pattern="^[a-zA-Z0-9]+$",
-        description="Product code for which to get recommendations (EAN/SKU)",
+        description="Product code for which to get recommendations",
         examples=["3017620425035"]
     )
-    limit: int = Field(
-        default=1,
-        ge=1,
-        le=50,
-        description="Number of recommended products to return (1-50)"
-    )
-    user_preferences: Optional[UserPreferences] = Field(
-        default=None,
-        description="User preferences affecting recommendations"
-    )
+    limit: Annotated[int, Field(
+    default=1,
+    strict=True,
+    ge=1,
+    le=50,
+    description="Number of recommended products to return",
+    examples=[3]  
+)]
+    user_preferences: Annotated[Optional[UserPreferences], Field(
+    default=None,
+    description="user preferences for personalization",
+    examples=[3]  
+    )]
 
-    model_config = ConfigDict(
-        json_schema_extra={
+    model_config = {
+        "json_schema_extra": {
             "example": {
                 "product_code": "3017620425035",
                 "limit": 3,
@@ -59,7 +56,7 @@ class ProductRecommendationRequest(BaseModel):
                 }
             }
         }
-    )
+    }
 
 class RecommendedProduct(BaseModel):
     code: str = Field(..., description="Product code (EAN/SKU)")

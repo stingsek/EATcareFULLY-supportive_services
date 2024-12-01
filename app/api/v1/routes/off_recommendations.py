@@ -5,13 +5,13 @@ from app.models.schemas.product_recommendation import (
     ProductRecommendationRequest, 
     UserPreferences
 )
-import logging
 from time import time
 from fastapi import Depends
 from app.dependencies import get_recommendation_service
 from app.services.recommendation.service import RecommendationService
+from app.utils.logger import setup_colored_logger
 
-logger = logging.getLogger(__name__)
+logger = setup_colored_logger(__name__)
 
 router = APIRouter(
     prefix="/api/v1",
@@ -57,13 +57,10 @@ async def get_recommendations_for_product(
             user_preferences=user_preferences
         )
         
-        # Pomiar czasu
         start_time = time()
         
-        # Generowanie rekomendacji
         recommendations = await recommendation_service.generate_recommendations(request)
         
-        # Obliczanie czasu generowania
         generation_time = time() - start_time
         
         return ProductRecommendationResponse(
@@ -82,10 +79,9 @@ async def get_recommendations_for_product(
             }
         )
     except Exception as e:
-        # Można też dodać logowanie błędu
         logger.exception(f"Error generating recommendations for {product_id}")
         raise HTTPException(
-            status_code=500,
+            status_code=500, 
             detail={
                 "error": "Internal server error",
                 "message": str(e)

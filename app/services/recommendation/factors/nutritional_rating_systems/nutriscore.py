@@ -1,9 +1,14 @@
 from services.recommendation.factors.nutritional_rating_systems.nutritional_rating_system import NutritionalScore, NutritionalRatingSystem
 from models.domain.off_product import OpenFoodFactsProduct
 from services.recommendation.evaluator.off_evaluator import OpenFoodFactsProductEvaluator
-from app.services.recommendation.strategy import RecommendationStrategy
+from app.services.recommendation.factors.recommendation_factor import RecommendationFactor, FactorPreferenceStatus
 from enum import Enum
-from recommendation_factor import FactorStatus
+from typing import List
+from pandas import notna
+from app.utils.logger import setup_colored_logger
+
+logger = setup_colored_logger(__name__)
+
 
 class NutriscoreGrade(Enum):
     A = "A"
@@ -30,10 +35,8 @@ class NutriscoreGrade(Enum):
 class Nutriscore(NutritionalRatingSystem):
     """Implementation of the Nutri-Score rating system."""
     
-    def __init__(self, maximize_score: bool = False):
-        
-        super().__init__(maximize_score=maximize_score)
-        
+    def __init__(self, maximize_score=False):
+        super().__init__(maximize_score)
         self._thresholds = self._initialize_thresholds()
         
     @staticmethod
@@ -84,24 +87,25 @@ class Nutriscore(NutritionalRatingSystem):
         category = product.category.value
         
         # Calculate negative points
+        logger.info(f"start negative points calculation for {product.code}")
         negative_points = sum([
             self._score_based_on_thresholds(
-                product.details["energy_100g"].iloc[0],
+                product.details["energy_100g"],
                 self._thresholds["energy"][category],
                 10
             ),
             self._score_based_on_thresholds(
-                product.details["sugars_100g"].iloc[0],
+                product.details["sugars_100g"],
                 self._thresholds["sugar"][category],
                 10
             ),
             self._score_based_on_thresholds(
-                product.details["saturated-fat_100g"].iloc[0],
+                product.details["saturated-fat_100g"],
                 self._thresholds["saturated_fat"]["default"],
                 10
             ),
             self._score_based_on_thresholds(
-                product.details["salt_100g"].iloc[0],
+                product.details["salt_100g"],
                 self._thresholds["sodium"],
                 10
             )
@@ -110,12 +114,12 @@ class Nutriscore(NutritionalRatingSystem):
         # Calculate positive points
         positive_points = sum([
             self._score_based_on_thresholds(
-                product.details["fiber_100g"].iloc[0],
+                product.details["fiber_100g"],
                 self._thresholds["fiber"],
                 5
             ),
             self._score_based_on_thresholds(
-                product.details["proteins_100g"].iloc[0],
+                product.details["proteins_100g"],
                 self._thresholds["protein"],
                 5
             )
@@ -160,7 +164,7 @@ class Nutriscore(NutritionalRatingSystem):
         return NutriscoreGrade.E  # Default grade if no range matches
     
     def __has_nutriscore(self, product: OpenFoodFactsProduct) -> bool:
-        return product.details["nutriscore_grade"].notna() or product.details["nutriscore_grade"] != ""
+        return notna(product.details["nutriscore_grade"]) & (product.details["nutriscore_grade"] != "")
     
     def has_better_rating(self, product: OpenFoodFactsProduct, other: OpenFoodFactsProduct) -> bool:
         """
@@ -176,33 +180,36 @@ class Nutriscore(NutritionalRatingSystem):
         Raises:
             ValueError: If any of the products has empty details
         """
+        
         if product.details.empty or other.details.empty:
             raise ValueError("Cannot compare empty products")
         
         def get_grade(prod: OpenFoodFactsProduct) -> str:
             if self.__has_nutriscore(prod):
-                return prod.details["nutriscore_grade"].iloc[0].upper()
+                return prod.details["nutriscore_grade"].upper()
             return self.rate(prod)
         
         return get_grade(product) < get_grade(other)
     
 class NutriscoreEvaluator(OpenFoodFactsProductEvaluator):
-    def __init__(self, bonus: int | None = 5) -> None:
-        super().__init__(bonus)
+    """Evaluator for Nutri-Score based product scoring."""
+    def __init__(self):
+        super().__init__()
     
-    def evaluate(self, product: OpenFoodFactsProduct, recommendation_strategy: RecommendationStrategy) -> float:
+    def evaluate(self, product: OpenFoodFactsProduct, recommendation_factors: List[RecommendationFactor]) -> float:
         if product.details.empty:
             raise ValueError("Cannot evaluate empty product")
             
-        if "nutriscore_score" not in product.details.columns:
+        if "nutriscore_score" not in product.details.index.tolist():
             raise ValueError("Product doesn't have nutriscore_score")
             
-        score = float(product.details["nutriscore_score"].iloc[0])
-
-        for factor in recommendation_strategy.recommendation_factors:
+        score = float(product.details["nutriscore_score"])
+        
+        for factor in recommendation_factors:
             if factor.exists(product.details):
-                    if factor.status == FactorStatus.RECOMMEND:
+                    if factor.status == FactorPreferenceStatus.RECOMMEND:
                         score -= self.bonus
+        logger.info(f"code {product.code}, score: {score}")
         return score
     
     

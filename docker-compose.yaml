@@ -8,9 +8,9 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - dataset_volume:/app/data/processed
+      - dataset_volume:/data/processed
     environment:
-      - DATASET_PATH=/app/data/processed/openfoodfacts.pkl
+      - DATASET_PATH=/data/processed/openfoodfacts.pkl
       - MODEL_CACHE_SIZE=75
       - MEMORY_LIMIT=4g
     deploy:

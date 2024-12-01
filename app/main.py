@@ -1,8 +1,7 @@
 # app/main.py
 from fastapi import FastAPI, Depends
 from fastapi.responses import JSONResponse
-from app.utils.dataset_manager import DatasetManager
-from app.api.v1.routes.off_recommendations import router as recommendations
+from app.api.v1.routes.off_recommendations import router
 from contextlib import asynccontextmanager
 from dependencies import get_dataset_manager
 
@@ -20,8 +19,7 @@ app = FastAPI(lifespan=lifespan)
 
 
 app.include_router(
-    recommendations.router,
-    prefix="/api/v1",
+    router,
     dependencies=[Depends(get_dataset_manager)]
 )
 

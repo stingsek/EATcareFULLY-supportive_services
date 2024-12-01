@@ -4,14 +4,15 @@ import pandas as pd
 from models.domain.off_product import OpenFoodFactsProduct
 from app.services.recommendation.strategy import RecommendationStrategy
 from logging import getLogger
-import app.services.recommendation.factors.recommendation_factor as FactorStatus
+from app.services.recommendation.factors.recommendation_factor import FactorPreferenceStatus
 from services.recommendation.factors.categories.categories_comparator import CategoriesComparator
 from services.recommendation.evaluator.off_evaluator import OpenFoodFactsProductEvaluator
 from services.text_processing.sentence_transformer_comparator import SentenceTransformerComparator
 from services.recommendation.factors.nutritional_rating_systems.nutriscore import NutriscoreEvaluator
 from heapq import nlargest, nsmallest, heappush
+from app.utils.logger import setup_colored_logger
 
-logger = getLogger(__name__)
+logger = setup_colored_logger(__name__)
 
 class RecommendationEngine:
     """
@@ -65,10 +66,14 @@ class RecommendationEngine:
             List[int]: List of product codes for the top `n` recommendations.
         """
         _df = from_df.copy()
-
-        product_categories = product.details["categories_en"].iloc[0]
+        
+        product_categories = product.details["categories_en"]
+    
+        logger.info(f"start excluding redundant products from {len(_df)} products")
 
         _df = self.__exclude_redundant_products(_df, product_categories)
+        
+        logger.info(f"redundant products excluded")
 
         recommendations = self.__get_n_best_recommendations(_df, product, n)
             
@@ -77,6 +82,7 @@ class RecommendationEngine:
 
     def __get_n_best_recommendations(self, from_df: pd.DataFrame, product: OpenFoodFactsProduct, n: int = 1, have_better_rating: bool = True) -> List[str]:
         try:
+            logger.info(f"Starting to evaluate {len(from_df)} products")
             evaluation_heap = self.__evaluate_all(from_df)
             
             if self.recommendation_strategy.nutritional_rating_system.maximize_score:
@@ -85,7 +91,8 @@ class RecommendationEngine:
                 best_n = nsmallest(n, evaluation_heap)
             
             if have_better_rating:
-                best_n = [(score, code) for score, code in best_n if self.__compare_ratings(product, OpenFoodFactsProduct(code, from_df[from_df['code'] == code]))]
+                for score, code in best_n:
+                    best_n = [(score, code) for score, code in best_n if self.__compare_ratings(product, OpenFoodFactsProduct(code, from_df[from_df['code'].astype(str) == code].squeeze()))]
             
             if len(best_n) < n:
                 logger.warning(f"Could not find enough products to recommend. Found {len(best_n)} products.")
@@ -101,7 +108,7 @@ class RecommendationEngine:
     
     
     def __evaluate(self, product: OpenFoodFactsProduct) -> float:
-        return self.evaluator.evaluate(product, self.recommendation_strategy)
+        return self.evaluator.evaluate(product, self.recommendation_strategy.recommendation_factors)
 
     def __evaluate_all(self, df: pd.DataFrame) -> List[tuple[float, str]]:
         evaluation = []
@@ -111,7 +118,7 @@ class RecommendationEngine:
             try:
                 product = OpenFoodFactsProduct(row['code'], row)
                 score = self.__evaluate(product)
-                heappush(evaluation, (sign * score, row['code']))
+                heappush(evaluation, (sign * score, str(row['code'])))
             except Exception as e:
                 logger.warning(f"Failed to evaluate product {row['code']}: {str(e)}")
                 continue
@@ -126,15 +133,18 @@ class RecommendationEngine:
         return self.categories_comparator.compare(product_categories, target_categories)
 
     def __filter_categories(self, df: pd.DataFrame, product_categories) -> pd.DataFrame:
+        logger.info(f"start filtering categories from {len(df)} products")
         df['similarity'] = df['categories_en'].apply(
             lambda x: self.__compare_categories(x, product_categories)
         )
+        logger.info(f"ended filtering categories")
         return df[df['similarity'] >= self.categories_similarity_threshold].reset_index(drop=True)
         
 
     def __avoid_factors(self, df: pd.DataFrame) -> pd.DataFrame:
+        logger.info(f"start avoiding factors from {len(df)} products")
         for factor in self.recommendation_strategy.recommendation_factors:
-            if factor.status == FactorStatus.AVOID:
+            if factor.status == FactorPreferenceStatus.AVOID:
                 mask = ~df.apply(lambda x: factor.exists(x), axis=1)
                 df = df[mask].reset_index(drop=True)
         return df

@@ -17,20 +17,26 @@ class NutritionalScore:
     
 class NutritionalRatingSystem(ABC):
     """Abstract base class for nutritional rating systems."""
-def __init__(self, maximize_score: bool = False):
-    self.maximize_score = maximize_score
+    maximize_score: bool
+    def __init__(self, maximize_score: bool = False):
+        self.maximize_score = maximize_score
+    
+    # @property
+    # @abstractmethod
+    # def path(self) -> str:
+    #     pass
 
-@abstractmethod
-def calculate_score(self, product: OpenFoodFactsProduct) -> NutritionalScore:
-    """Calculate nutritional score for a product."""
-    pass
+    @abstractmethod
+    def calculate_score(self, product: OpenFoodFactsProduct) -> NutritionalScore:
+        """Calculate nutritional score for a product."""
+        pass
 
-@abstractmethod
-def rate(self, product: OpenFoodFactsProduct) -> Any:
-    """Convert numerical score to specific grade."""
-    pass
+    @abstractmethod
+    def rate(self, product: OpenFoodFactsProduct) -> Any:
+        """Convert numerical score to specific grade."""
+        pass
 
-@abstractmethod
-def has_better_rating(self, target_product: OpenFoodFactsProduct, other_product: OpenFoodFactsProduct) -> bool:
-    """Compare two ratings from NutritionalRatingSystem."""
-    pass
+    @abstractmethod
+    def has_better_rating(self, target_product: OpenFoodFactsProduct, other_product: OpenFoodFactsProduct) -> bool:
+        """Compare two ratings from NutritionalRatingSystem."""
+        pass

@@ -6,8 +6,9 @@ import pickle
 import shutil
 from functools import lru_cache
 from app.utils.large_dataset_cache import LargeDatasetCache
+from app.utils.logger import setup_colored_logger
 
-logger = logging.getLogger(__name__)
+logger = setup_colored_logger(__name__)
 
 @lru_cache(maxsize=1)
 def get_cache_instance() -> LargeDatasetCache:
@@ -16,18 +17,26 @@ def get_cache_instance() -> LargeDatasetCache:
 class DatasetManager:
     def __init__(self, dataset_path: str):
         self.dataset_path = Path(dataset_path)
-        self.temp_path = Path("/tmp/openfoodfacts.pkl")
+        self.temp_path = Path("data/processed/openfoodfacts.pkl")
         self.cache = get_cache_instance()
         
     def initialize_dataset(self):
         """Initialize dataset at container startup"""
         try:
+            self.temp_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            self.dataset_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            
             if not self.dataset_path.exists():
-                logger.info("Dataset not found in volume, copying from image...")
+                logger.warning("Dataset not found in volume, copying from image...")
                 self._copy_dataset_to_volume()
             
+            logger.info("Dataset path exists")
             # Verify dataset
             self._verify_dataset()
+            
+            logger.info("After veryfing dataset")
             
             # Preload to cache
             self.get_dataset()
@@ -40,8 +49,11 @@ class DatasetManager:
             
     def _copy_dataset_to_volume(self):
         """Copy dataset from image to volume"""
+        logger.warning(f"Copying dataset to {self.dataset_path}")
         os.makedirs(self.dataset_path.parent, exist_ok=True)
-        shutil.copy2(self.temp_path, self.dataset_path)
+        logger.warning(f"data path: {self.dataset_path.exists()}")
+        logger.warning(f"temp path: {self.temp_path.exists()}")
+        shutil.copy2(src=self.temp_path, dst=self.dataset_path)
         
     def _verify_dataset(self):
         """Verify dataset integrity"""

@@ -4,7 +4,7 @@ from app.services.recommendation.service import RecommendationService
 
 @lru_cache(maxsize=1)
 def get_dataset_manager():
-    return DatasetManager("/app/data/processed/openfoodfacts.pkl")
+    return DatasetManager(dataset_path=r"../data2/")
 
 @lru_cache(maxsize=1)
 def get_recommendation_service():
