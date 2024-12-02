@@ -1,24 +1,29 @@
-from typing import List, Optional, Dict
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 from typing_extensions import Annotated
-from enum import IntEnum
-from typing import List, Optional, Dict
+from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict
 from app.services.recommendation.factors.recommendation_factor import FactorPreferenceStatus
 
 
-class UserPreferences(BaseModel):
-    details: Dict[str, FactorPreferenceStatus] = Field(
-        default_factory=dict,
-        description="User preferences (-1: dislike, 0: neutral, 1: like)",
-        examples=[{"milk": -1, "nuts": 1, "chocolate": 0}]
+class UserPreference(BaseModel):
+    name: str = Field(
+        ...,
+        min_length=3,
+        max_length=32,
+        description="Preference name",
+        examples=["milk", "nuts", "chocolate", "gluten"])
+    status: FactorPreferenceStatus = Field(
+        ...,
+        description="Preference status (-1: dislike, 0: neutral, 1: like)",
+        examples=[-1, 0, 1]
     )
 
     model_config = {
         "json_schema_extra": {
             "example": {
-                "preferences": {"milk": -1, "nuts": 1, "chocolate": 0}
+                "name": "milk",
+                "status": -1
             }
         }
     }
@@ -30,20 +35,24 @@ class ProductRecommendationRequest(BaseModel):
         max_length=48,
         pattern="^[a-zA-Z0-9]+$",
         description="Product code for which to get recommendations",
-        examples=["3017620425035"]
+        examples=["3017620425035", "5901234123457"]
     )
     limit: Annotated[int, Field(
     default=1,
     strict=True,
     ge=1,
-    le=50,
+    le=10,
     description="Number of recommended products to return",
-    examples=[3]  
+    examples=[3, 5, 10]
 )]
-    user_preferences: Annotated[Optional[UserPreferences], Field(
+    user_preferences: Annotated[Optional[List[UserPreference]], Field(
     default=None,
     description="user preferences for personalization",
-    examples=[3]  
+    examples=[[
+            {"name": "milk", "status": -1},
+            {"name": "nuts", "status": 1},
+            {"name": "chocolate", "status": 0}
+        ]]
     )]
 
     model_config = {
@@ -51,9 +60,10 @@ class ProductRecommendationRequest(BaseModel):
             "example": {
                 "product_code": "3017620425035",
                 "limit": 3,
-                "user_preferences": {
-                    "preferences": {"milk": -1, "nuts": 1}
-                }
+                "user_preferences": [
+                    {"name": "milk", "status": -1},
+                    {"name": "nuts", "status": 1}
+                ]
             }
         }
     }

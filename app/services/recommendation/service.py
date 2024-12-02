@@ -13,32 +13,41 @@ class RecommendationService:
     def __init__(self, dataset_manager: DatasetManager) -> None:
         self.dataset_manager = dataset_manager
         self.engine = RecommendationEngine()
+        
+    def __dataset(self):
+        return self.dataset_manager.get_dataset()
 
+    def __dataset_without_source_product(self, dataset, product_code):
+        return dataset[dataset['code'].astype(str) != product_code]
+    
+    def __product_details(self, dataset, product_code):
+        return dataset[dataset["code"].astype(str) == product_code].squeeze()
+        
     async def generate_recommendations(self, request: ProductRecommendationRequest) -> List[RecommendedProduct]:
+            product_code = request.product_code
+            user_preferences = request.user_preferences
             
-            logger.info(f"Generating recommendations for product {request.product_code}")
+            logger.info(f"Generating recommendations for product {product_code}")
             
-            dataset = self.dataset_manager.get_dataset()
-            logger.info(f"Got dataset")
+            dataset = self.__dataset()
             if dataset is None:
                 raise Exception("Dataset not available")
             
-
-            user_preferences = request.user_preferences
-            logger.info(f"Got user prefs")
+            logger.info(f"Got dataset")
             
-            product_details = dataset[dataset["code"].astype(str) == request.product_code].squeeze()
+            product_details = self.__product_details(dataset, product_code)
+            logger.info(f"Got source product details")
             
-            dataset = dataset[dataset['code'].astype(str) != request.product_code]
+            product = OpenFoodFactsProduct(product_code, product_details)
+            logger.info(f"Got product")
+            
+            dataset = self.__dataset_without_source_product(dataset, product_code)
             logger.info(f"Excluded source product from dataset")
 
 
-            product = OpenFoodFactsProduct(request.product_code, product_details)
-            logger.info(f"Got product")
-            
-            
             self.engine.recommendation_strategy.update_factors_status(user_preferences=user_preferences)
             logger.info(f"updated factors status")
+            
             logger.info(f"Start finding recommendations")
             recommendations = self.engine.find_recommendations(dataset, product, request.limit)
             logger.info(f"Got recommendations")

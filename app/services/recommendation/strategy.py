@@ -1,9 +1,12 @@
 from services.recommendation.factors.recommendation_factor import RecommendationFactor
 from dataclasses import dataclass
-from models.schemas.product_recommendation import UserPreferences
+from models.schemas.product_recommendation import UserPreference
 from typing import List, Optional, Dict
 from services.recommendation.factors.nutritional_rating_systems.nutriscore import Nutriscore
 from services.recommendation.factors.nutritional_rating_systems.nutritional_rating_system import NutritionalRatingSystem
+from app.utils.logger import setup_colored_logger
+
+logger = setup_colored_logger(__name__)
 
 @dataclass
 class RecommendationStrategy:
@@ -48,11 +51,15 @@ class RecommendationStrategy:
             nutritional_rating_system=Nutriscore()
         )
     
-    def update_factors_status(self, user_preferences: Optional[UserPreferences] = None) -> None:
+    def update_factors_status(self, user_preferences: Optional[List[UserPreference]] = None) -> None:
+        logger.info("Updating factors status")
         if not user_preferences:
+            logger.warning("No user preferences provided")
             return
         
-        for preference_name, status in user_preferences.details.items():
+        for user_preference in user_preferences:
+            preference_name = user_preference.name
+            status = user_preference.status
             if factor := self.__factors_dict.get(preference_name):
                 factor.update_status(status)
                             

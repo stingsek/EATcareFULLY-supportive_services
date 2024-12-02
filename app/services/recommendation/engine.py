@@ -3,7 +3,6 @@ from functools import lru_cache
 import pandas as pd
 from models.domain.off_product import OpenFoodFactsProduct
 from app.services.recommendation.strategy import RecommendationStrategy
-from logging import getLogger
 from app.services.recommendation.factors.recommendation_factor import FactorPreferenceStatus
 from services.recommendation.factors.categories.categories_comparator import CategoriesComparator
 from services.recommendation.evaluator.off_evaluator import OpenFoodFactsProductEvaluator

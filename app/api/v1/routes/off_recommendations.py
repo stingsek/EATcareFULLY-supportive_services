@@ -1,9 +1,9 @@
-from fastapi import APIRouter, HTTPException, Query
-from typing import Optional
+from fastapi import APIRouter, HTTPException, Body
+from typing import Optional, List
 from app.models.schemas.product_recommendation import (
     ProductRecommendationResponse, 
     ProductRecommendationRequest, 
-    UserPreferences
+    UserPreference
 )
 from time import time
 from fastapi import Depends
@@ -18,7 +18,7 @@ router = APIRouter(
     tags=["api", "v1"]
 )
 
-@router.get(
+@router.post(
     "/recommendations/{product_id}",
     response_model=ProductRecommendationResponse,
     responses={
@@ -29,13 +29,8 @@ router = APIRouter(
 )
 async def get_recommendations_for_product(
     product_id: str,
-    limit: int = Query(
-        default=1, 
-        ge=1, 
-        le=50,
-        description="Number of recommendations to return"
-    ),
-    user_preferences: Optional[UserPreferences] = None,
+    limit: int = Body(default=1, ge=1, le=50),
+    user_preferences: Optional[List[UserPreference]] = Body(default=None),
     recommendation_service: RecommendationService = Depends(get_recommendation_service)
 ) -> ProductRecommendationResponse:
     """
