@@ -1,12 +1,11 @@
 from typing import Any, Optional
 from pathlib import Path
-import logging
 import os
 import pickle
 import shutil
 from functools import lru_cache
-from app.utils.large_dataset_cache import LargeDatasetCache
-from app.utils.logger import setup_colored_logger
+from utils.large_dataset_cache import LargeDatasetCache
+from utils.logger import setup_colored_logger
 
 logger = setup_colored_logger(__name__)
 
@@ -17,7 +16,7 @@ def get_cache_instance() -> LargeDatasetCache:
 class DatasetManager:
     def __init__(self, dataset_path: str):
         self.dataset_path = Path(dataset_path)
-        self.temp_path = Path("data/processed/openfoodfacts.pkl")
+        self.temp_path = Path("../data/openfoodfacts_sample.pkl")
         self.cache = get_cache_instance()
         
     def initialize_dataset(self):

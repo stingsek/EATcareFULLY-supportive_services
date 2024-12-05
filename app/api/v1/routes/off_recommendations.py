@@ -1,15 +1,15 @@
 from fastapi import APIRouter, HTTPException, Body
 from typing import Optional, List
-from app.models.schemas.product_recommendation import (
+from models.schemas.product_recommendation import (
     ProductRecommendationResponse, 
     ProductRecommendationRequest, 
     UserPreference
 )
 from time import time
 from fastapi import Depends
-from app.dependencies import get_recommendation_service
-from app.services.recommendation.service import RecommendationService
-from app.utils.logger import setup_colored_logger
+from dependencies import get_recommendation_service
+from services.recommendation.service import RecommendationService
+from utils.logger import setup_colored_logger
 
 logger = setup_colored_logger(__name__)
 
@@ -53,15 +53,15 @@ async def get_recommendations_for_product(
         )
         
         start_time = time()
-        
         recommendations = await recommendation_service.generate_recommendations(request)
-        
         generation_time = time() - start_time
+        
+        logger.info(f"product_id: {product_id}")
+        logger.info(f"Generated {len(recommendations)} recommendations in {generation_time:.2f} seconds")
         
         return ProductRecommendationResponse(
             source_product_code=product_id,
             recommendations=recommendations,
-            generation_time=generation_time,
             total_found=len(recommendations)
         )
         

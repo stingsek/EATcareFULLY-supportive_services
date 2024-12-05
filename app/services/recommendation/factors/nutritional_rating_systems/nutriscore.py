@@ -1,11 +1,11 @@
 from services.recommendation.factors.nutritional_rating_systems.nutritional_rating_system import NutritionalScore, NutritionalRatingSystem
 from models.domain.off_product import OpenFoodFactsProduct
 from services.recommendation.evaluator.off_evaluator import OpenFoodFactsProductEvaluator
-from app.services.recommendation.factors.recommendation_factor import RecommendationFactor, FactorPreferenceStatus
+from services.recommendation.factors.recommendation_factor import RecommendationFactor, FactorPreferenceStatus
 from enum import Enum
 from typing import List
 from pandas import notna
-from app.utils.logger import setup_colored_logger
+from utils.logger import setup_colored_logger
 
 logger = setup_colored_logger(__name__)
 
@@ -18,11 +18,11 @@ class NutriscoreGrade(Enum):
     E = "E"
     
     def __lt__(self, other):
-        grades_order = {"A": 1, "B": 2, "C": 3, "D": 4, "E": 5}
+        grades_order = {"A": 5, "B": 4, "C": 3, "D": 2, "E": 1}
         return grades_order[self.value] < grades_order[other.value]
         
     def __gt__(self, other):
-        grades_order = {"A": 1, "B": 2, "C": 3, "D": 4, "E": 5}
+        grades_order = {"A": 5, "B": 4, "C": 3, "D": 2, "E": 1}
         return grades_order[self.value] > grades_order[other.value]
         
     def __le__(self, other):
@@ -184,10 +184,17 @@ class Nutriscore(NutritionalRatingSystem):
         if product.details.empty or other.details.empty:
             raise ValueError("Cannot compare empty products")
         
-        def get_grade(prod: OpenFoodFactsProduct) -> str:
+        def get_grade(prod: OpenFoodFactsProduct) -> NutriscoreGrade:
             if self.__has_nutriscore(prod):
-                return prod.details["nutriscore_grade"].upper()
+                def convert_grade(grade_str):
+                    return NutriscoreGrade[grade_str]
+                logger.info(prod.details["nutriscore_grade"])
+                return convert_grade(prod.details["nutriscore_grade"].upper())
             return self.rate(prod)
+        
+        logger.info(f"start comparing nutriscores for {product.code} and {other.code}")
+        logger.info(f"start comparing nutriscores for {get_grade(product)} and {get_grade(other)}")
+        logger.info(f"{get_grade(product) < get_grade(other)}")
         
         return get_grade(product) < get_grade(other)
     
@@ -209,7 +216,6 @@ class NutriscoreEvaluator(OpenFoodFactsProductEvaluator):
             if factor.exists(product.details):
                     if factor.status == FactorPreferenceStatus.RECOMMEND:
                         score -= self.bonus
-        logger.info(f"code {product.code}, score: {score}")
         return score
     
     

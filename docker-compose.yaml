@@ -8,9 +8,10 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - dataset_volume:/data/processed
+      - ./data:/data 
     environment:
-      - DATASET_PATH=/data/processed/openfoodfacts.pkl
+      - DATASET_PATH=/data/openfoodfacts_sample.pkl
+      - SIMILARITIES_PATH=/data/similarities.csv
       - MODEL_CACHE_SIZE=75
       - MEMORY_LIMIT=4g
     deploy:
@@ -25,5 +26,5 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${PWD}/data
+      device: ./data  
       o: bind

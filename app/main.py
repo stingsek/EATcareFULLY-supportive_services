@@ -1,7 +1,7 @@
 # app/main.py
 from fastapi import FastAPI, Depends
 from fastapi.responses import JSONResponse
-from app.api.v1.routes.off_recommendations import router
+from api.v1.routes.off_recommendations import router
 from contextlib import asynccontextmanager
 from dependencies import get_dataset_manager
 

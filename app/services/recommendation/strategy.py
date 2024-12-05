@@ -1,10 +1,10 @@
 from services.recommendation.factors.recommendation_factor import RecommendationFactor
 from dataclasses import dataclass
 from models.schemas.product_recommendation import UserPreference
-from typing import List, Optional, Dict
+from typing import List, Optional
 from services.recommendation.factors.nutritional_rating_systems.nutriscore import Nutriscore
 from services.recommendation.factors.nutritional_rating_systems.nutritional_rating_system import NutritionalRatingSystem
-from app.utils.logger import setup_colored_logger
+from utils.logger import setup_colored_logger
 
 logger = setup_colored_logger(__name__)
 

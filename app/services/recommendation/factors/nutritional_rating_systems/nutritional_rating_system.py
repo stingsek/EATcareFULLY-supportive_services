@@ -21,11 +21,6 @@ class NutritionalRatingSystem(ABC):
     def __init__(self, maximize_score: bool = False):
         self.maximize_score = maximize_score
     
-    # @property
-    # @abstractmethod
-    # def path(self) -> str:
-    #     pass
-
     @abstractmethod
     def calculate_score(self, product: OpenFoodFactsProduct) -> NutritionalScore:
         """Calculate nutritional score for a product."""

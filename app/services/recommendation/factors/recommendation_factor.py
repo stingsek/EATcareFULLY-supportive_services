@@ -3,7 +3,7 @@ from typing import List
 from enum import IntEnum
 import re
 import pandas as pd
-from app.utils.logger import setup_colored_logger
+from utils.logger import setup_colored_logger
 
 logger = setup_colored_logger(__name__)
 

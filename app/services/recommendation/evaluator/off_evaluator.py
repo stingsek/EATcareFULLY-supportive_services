@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from models.domain.off_product import OpenFoodFactsProduct
-from app.services.recommendation.factors.recommendation_factor import RecommendationFactor
+from services.recommendation.factors.recommendation_factor import RecommendationFactor
 from typing import Optional, List
 
 class OpenFoodFactsProductEvaluator(ABC):

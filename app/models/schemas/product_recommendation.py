@@ -1,9 +1,8 @@
 from pydantic import BaseModel, Field, ConfigDict
-from datetime import datetime
 from typing_extensions import Annotated
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict
-from app.services.recommendation.factors.recommendation_factor import FactorPreferenceStatus
+from services.recommendation.factors.recommendation_factor import FactorPreferenceStatus
 
 
 class UserPreference(BaseModel):
@@ -90,15 +89,6 @@ class ProductRecommendationResponse(BaseModel):
         ..., 
         description="List of recommended products"
     )
-    generation_time: float = Field(
-        ...,
-        ge=0,
-        description="Time taken to generate recommendations (in seconds)"
-    )
-    timestamp: datetime = Field(
-        default_factory=datetime.now,  # zmiana z now na utcnow
-        description="UTC timestamp when recommendations were generated"
-    )
     total_found: int = Field(
         ..., 
         ge=0,
@@ -115,8 +105,6 @@ class ProductRecommendationResponse(BaseModel):
                         "name": "Example Product",
                     }
                 ],
-                "generation_time": 0.125,
-                "timestamp": "2024-03-26T12:00:00Z",
                 "total_found": 42
             }
         }
