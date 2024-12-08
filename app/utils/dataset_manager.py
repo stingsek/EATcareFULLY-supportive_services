@@ -6,6 +6,7 @@ import shutil
 from functools import lru_cache
 from utils.large_dataset_cache import LargeDatasetCache
 from utils.logger import setup_colored_logger
+from config import DATA_DIR
 
 logger = setup_colored_logger(__name__)
 
@@ -14,9 +15,12 @@ def get_cache_instance() -> LargeDatasetCache:
     return LargeDatasetCache(max_memory_percent=75.0)
 
 class DatasetManager:
-    def __init__(self, dataset_path: str):
-        self.dataset_path = Path(dataset_path)
-        self.temp_path = Path("../data/openfoodfacts_sample.pkl")
+    def __init__(self, dataset_file_name: str):
+        self.dataset_path = DATA_DIR / dataset_file_name
+        logger.info(f"Dataset path: {self.dataset_path}")
+        self.temp_path = DATA_DIR / "openfoodfacts_sample.pkl"
+
+
         self.cache = get_cache_instance()
         
     def initialize_dataset(self):

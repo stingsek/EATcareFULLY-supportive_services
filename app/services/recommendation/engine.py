@@ -7,6 +7,7 @@ from services.recommendation.evaluator.off_evaluator import OpenFoodFactsProduct
 from services.recommendation.factors.nutritional_rating_systems.nutriscore import NutriscoreEvaluator
 from heapq import nlargest, nsmallest, heappush
 from utils.logger import setup_colored_logger
+from config import DATA_DIR
 
 logger = setup_colored_logger(__name__)
 
@@ -73,18 +74,28 @@ class RecommendationEngine:
         return recommendations
 
     def __get_most_similar_products(self, from_df: pd.DataFrame, product: OpenFoodFactsProduct) -> pd.DataFrame:
-        similarities = pd.read_csv("../data/similarities.csv")
-        similarities['product1'] = similarities['product1'].astype(str).str.zfill(8)
-        similarities['product2'] = similarities['product2'].astype(str).str.zfill(8)
-        product_code = str(product.code).zfill(8)
+        
+        def normalize_product_codes(df: pd.DataFrame, column_name: str) -> pd.DataFrame:
+            """Normalize product codes to 8 digits"""
+            df = df.copy()
+            df[column_name] = df[column_name].astype(str).str.zfill(8)
+            return df
+        
+        similarities = pd.read_csv(DATA_DIR / 'similarities.csv')
+        similarities = normalize_product_codes(similarities, 'product1')
+        similarities = normalize_product_codes(similarities, 'product2')
     
-        similarities = similarities[similarities['product1'] == product_code]
-        from_df['code'] = from_df['code'].astype(str).str.zfill(8)
-        from_df = from_df[from_df['code'].isin(similarities['product2'])]
+        product_code = str(product.code).zfill(8)
         
-        logger.info(f"Found {from_df}")
+        similar_products = similarities[similarities['product1'] == product_code]
+
+    
+        normalized_df = normalize_product_codes(from_df, 'code')
+        filtered_products = normalized_df[
+        normalized_df['code'].isin(similar_products['product2'])
+    ]
         
-        return from_df
+        return filtered_products
         
         
 

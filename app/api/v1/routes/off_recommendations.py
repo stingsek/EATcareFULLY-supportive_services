@@ -19,7 +19,7 @@ router = APIRouter(
 )
 
 @router.post(
-    "/recommendations/{product_id}",
+    "/recommendations/",
     response_model=ProductRecommendationResponse,
     responses={
         200: {"description": "Successful response"},
@@ -28,39 +28,29 @@ router = APIRouter(
     }
 )
 async def get_recommendations_for_product(
-    product_id: str,
-    limit: int = Body(default=1, ge=1, le=50),
-    user_preferences: Optional[List[UserPreference]] = Body(default=None),
+    request: ProductRecommendationRequest = Body(...),
     recommendation_service: RecommendationService = Depends(get_recommendation_service)
 ) -> ProductRecommendationResponse:
     """
-    Get product recommendations based on product ID and optional user preferences.
+    Get product recommendations based on request data.
     
     Args:
-        product_id: Product identifier
-        limit: Number of recommendations to return (1-50)
-        user_preferences: Optional user preferences for personalization
+        request: ProductRecommendationRequest containing product_code, limit, and preferences
         recommendation_service: Injected recommendation service
         
     Returns:
         ProductRecommendationResponse with recommendations
     """
     try:
-        request = ProductRecommendationRequest(
-            product_code=product_id,
-            limit=limit,
-            user_preferences=user_preferences
-        )
-        
         start_time = time()
         recommendations = await recommendation_service.generate_recommendations(request)
         generation_time = time() - start_time
         
-        logger.info(f"product_id: {product_id}")
+        logger.info(f"product_id: {request.product_code}")
         logger.info(f"Generated {len(recommendations)} recommendations in {generation_time:.2f} seconds")
         
         return ProductRecommendationResponse(
-            source_product_code=product_id,
+            source_product_code=request.product_code,
             recommendations=recommendations,
             total_found=len(recommendations)
         )
@@ -74,7 +64,7 @@ async def get_recommendations_for_product(
             }
         )
     except Exception as e:
-        logger.exception(f"Error generating recommendations for {product_id}")
+        logger.exception(f"Error generating recommendations for {request.product_code}")
         raise HTTPException(
             status_code=500, 
             detail={
