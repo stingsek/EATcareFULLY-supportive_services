@@ -70,12 +70,16 @@ class ProductRecommendationRequest(BaseModel):
 class RecommendedProduct(BaseModel):
     code: str = Field(..., description="Product code (EAN/SKU)")
     name: str = Field(..., description="Product name")
+    image_url : Optional[str] = Field(None, description="Product image URL")
+    nutriscore: Optional[str] = Field(None, description="Nutriscore rating")
     
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "code": "3017620425036",
                 "name": "Example Product",
+                "image_url": "https://example.com/image.jpg",
+                "nutriscore": "C"
             }
         }
     )

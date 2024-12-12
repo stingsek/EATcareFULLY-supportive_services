@@ -74,7 +74,9 @@ class RecommendationService:
             for recommendation_code in recommendations:
                 product_details = self.__get_product_details(dataset, recommendation_code)
                 product_name = self.__sanitize_product_name(product_details['product_name'])
-                recommendations_processed.append(RecommendedProduct(code=recommendation_code, name=product_name))
+                image_url = product_details['image_url']
+                nutriscore = product_details['nutriscore_grade'].upper()
+                recommendations_processed.append(RecommendedProduct(code=recommendation_code, name=product_name, image_url=image_url, nutriscore=nutriscore))
                 
             return recommendations_processed
 

@@ -1,9 +1,7 @@
 from fastapi import APIRouter, HTTPException, Body
-from typing import Optional, List
 from models.schemas.product_recommendation import (
     ProductRecommendationResponse, 
     ProductRecommendationRequest, 
-    UserPreference
 )
 from time import time
 from fastapi import Depends
